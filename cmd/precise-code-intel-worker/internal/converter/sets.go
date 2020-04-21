@@ -1,5 +1,17 @@
 package converter
 
+type defaultIDSetMap map[string]idSet
+
+func (sm defaultIDSetMap) getOrCreate(key string) idSet {
+	if s, ok := sm[key]; ok {
+		return s
+	}
+
+	s := newIDSet()
+	sm[key] = s
+	return s
+}
+
 type idSet map[string]struct{}
 
 func newIDSet() idSet {

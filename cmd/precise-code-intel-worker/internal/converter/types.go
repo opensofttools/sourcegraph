@@ -7,7 +7,7 @@ import (
 )
 
 type Element struct {
-	ID    string `json:"id"` // TODO - strig or int
+	ID    string `json:"id"` // TODO - string or int
 	Type  string `json:"type"`
 	Label string `json:"label"`
 	Raw   json.RawMessage
@@ -87,14 +87,14 @@ func unmarshalDocumentData(element Element, projectRoot string) (payload Documen
 //
 
 type RangeData struct {
-	StartLine          int
-	StartCharacter     int
-	EndLine            int
-	EndCharacter       int
-	DefinitionResultID string
-	ReferenceResultID  string
-	HoverResultID      string
-	MonikerIDs         idSet
+	StartLine          int    `json:"startLine"`
+	StartCharacter     int    `json:"startCharacter"`
+	EndLine            int    `json:"endLine"`
+	EndCharacter       int    `json:"endCharacter"`
+	DefinitionResultID string `json:"definitionResultId"`
+	ReferenceResultID  string `json:"referenceResultId"`
+	HoverResultID      string `json:"hoverResultId"`
+	MonikerIDs         idSet  `json:"monikerIds"`
 }
 
 func unmarshalRangeData(element Element) (RangeData, error) {
@@ -282,14 +282,10 @@ func (d ResultSetData) setMonikerIDs(ids idSet) ResultSetData {
 //
 //
 
-type DefinitionResultData map[string]idSet
-
-func unmarshalDefinitionResultData(element Element) (DefinitionResultData, error) {
+func unmarshalDefinitionResultData(element Element) (defaultIDSetMap, error) {
 	return map[string]idSet{}, nil
 }
 
-type ReferenceResultData map[string]idSet
-
-func unmarshalReferenceResultData(element Element) (ReferenceResultData, error) {
+func unmarshalReferenceResultData(element Element) (defaultIDSetMap, error) {
 	return map[string]idSet{}, nil
 }

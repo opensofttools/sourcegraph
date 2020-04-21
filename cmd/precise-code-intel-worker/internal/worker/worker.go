@@ -2,9 +2,13 @@ package worker
 
 import (
 	"context"
-	"time"
+	"fmt"
+	"io/ioutil"
 	"os"
+	"path/filepath"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/sourcegraph/sourcegraph/cmd/precise-code-intel-worker/internal/bundles"
 	"github.com/sourcegraph/sourcegraph/cmd/precise-code-intel-worker/internal/converter"
 	"github.com/sourcegraph/sourcegraph/cmd/precise-code-intel-worker/internal/db"
@@ -47,24 +51,38 @@ func (w *Worker) process(upload db.Upload, closer db.TxCloser) (err error) {
 		err = closer.CloseTx(err)
 	}()
 
-	filename, err := w.bundleManagerClient.GetUpload(context.Background(), upload.ID)
+	name, err := ioutil.TempDir("", "")
 	if err != nil {
 		return err
 	}
-	defer os.Remove(filename)
+	defer func() {
+		// TODO - catch error
+		_ = os.RemoveAll(name)
+	}()
 
-	newFilename := ""
-	packages, refs, err := converter.Convert(newFilename, upload.Root)
+	filename, err := w.bundleManagerClient.GetUpload(context.Background(), upload.ID, name)
 	if err != nil {
 		return err
 	}
-	defer os.Remove(newFilename)
+
+	uuid, err := uuid.NewRandom()
+	if err != nil {
+		return err
+	}
+	newFilename := filepath.Join(name, uuid.String())
+
+	packages, refs, err := converter.Convert(upload.RepositoryID, upload.Commit, upload.Root, filename, newFilename)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("> %#v\n> %#v\n", packages, refs)
 
 	// TODO - TW
 	// TODO - unify types here
-	if err := w.db.UpdatePackagesAndRefs(context.Background(), nil, upload.ID, packages, refs); err != nil {
-		return err
-	}
+	// if err := w.db.UpdatePackagesAndRefs(context.Background(), nil, upload.ID, packages, refs); err != nil {
+	// 	return err
+	// }
 
 	f, err := os.Open(newFilename)
 	if err != nil {
@@ -76,7 +94,7 @@ func (w *Worker) process(upload db.Upload, closer db.TxCloser) (err error) {
 		return err
 	}
 
-	// TODO - delete overlapping dumps
+	// TODO - delete overwritten dumps
 	// TODO
 
 	// TODO - update commits and dumps visible from tip

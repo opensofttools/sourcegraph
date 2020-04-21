@@ -1,8 +1,11 @@
 package converter
 
 import (
+	"bufio"
+	"compress/gzip"
 	"errors"
 	"fmt"
+	"os"
 )
 
 type CorrelationState struct {
@@ -13,8 +16,8 @@ type CorrelationState struct {
 	documentData           map[string]DocumentData
 	rangeData              map[string]RangeData
 	resultSetData          map[string]ResultSetData
-	definitionData         map[string]DefinitionResultData
-	referenceData          map[string]ReferenceResultData
+	definitionData         map[string]defaultIDSetMap
+	referenceData          map[string]defaultIDSetMap
 	hoverData              map[string]string
 	monikerData            map[string]MonikerData
 	packageInformationData map[string]PackageInformationData
@@ -32,8 +35,8 @@ func newCorrelationState(dumpRoot string) *CorrelationState {
 		documentData:           map[string]DocumentData{},
 		rangeData:              map[string]RangeData{},
 		resultSetData:          map[string]ResultSetData{},
-		definitionData:         map[string]DefinitionResultData{},
-		referenceData:          map[string]ReferenceResultData{},
+		definitionData:         map[string]defaultIDSetMap{},
+		referenceData:          map[string]defaultIDSetMap{},
 		hoverData:              map[string]string{},
 		monikerData:            map[string]MonikerData{},
 		packageInformationData: map[string]PackageInformationData{},
@@ -64,6 +67,44 @@ func malformedDump(id, references string, kinds ...string) error {
 		References: references,
 		Kinds:      kinds,
 	}
+}
+
+func correlate(filename, root string) (*CorrelationState, error) {
+	f, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	gzipReader, err := gzip.NewReader(f)
+	if err != nil {
+		return nil, err
+	}
+
+	cx := newCorrelationState(root)
+	scanner := bufio.NewScanner(gzipReader)
+	scanner.Split(bufio.ScanLines)
+
+	for scanner.Scan() {
+		element, err := unmarshalElement(scanner.Bytes())
+		if err != nil {
+			return nil, err
+		}
+
+		if err := correlateElement(cx, element); err != nil {
+			return nil, err
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
+	if cx.lsifVersion == "" {
+		return nil, fmt.Errorf("no metadata defined")
+	}
+
+	return cx, nil
 }
 
 func correlateElement(state *CorrelationState, element Element) error {

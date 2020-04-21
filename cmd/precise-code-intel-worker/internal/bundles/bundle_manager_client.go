@@ -7,10 +7,13 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
+
+	"github.com/google/uuid"
 )
 
 type BundleManagerClient interface {
-	GetUpload(ctx context.Context, bundleID int) (string, error)
+	GetUpload(ctx context.Context, bundleID int, dir string) (string, error)
 	SendDB(ctx context.Context, bundleID int, r io.Reader) error
 }
 
@@ -24,7 +27,7 @@ func New(bundleManagerURL string) BundleManagerClient {
 	return &bundleManagerClientImpl{bundleManagerURL: bundleManagerURL}
 }
 
-func (c *bundleManagerClientImpl) GetUpload(ctx context.Context, bundleID int) (string, error) {
+func (c *bundleManagerClientImpl) GetUpload(ctx context.Context, bundleID int, dir string) (string, error) {
 	url, err := url.Parse(fmt.Sprintf("%s/uploads/%d", c.bundleManagerURL, bundleID))
 	if err != nil {
 		return "", err
@@ -46,7 +49,12 @@ func (c *bundleManagerClientImpl) GetUpload(ctx context.Context, bundleID int) (
 		return "", fmt.Errorf("unexpected status %d", resp.StatusCode)
 	}
 
-	filename := "//" // TODO - make a temp thing
+	uuid, err := uuid.NewRandom()
+	if err != nil {
+		return "", err
+	}
+	filename := filepath.Join(dir, uuid.String())
+
 	f, err := os.Create(filename)
 	if err != nil {
 		return "", err
