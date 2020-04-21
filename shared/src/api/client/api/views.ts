@@ -97,12 +97,8 @@ export class ClientViews implements ClientViewsAPI {
 
     public $registerViewProvider(
         id: string,
-        providerFunction: ProxyResult<((params: { [key: string]: string }) => ProxySubscribable<View>) & ProxyValue>
+        providerFunction: ProxyResult<((params: Record<string, string>) => ProxySubscribable<View>) & ProxyValue>
     ): Unsubscribable & ProxyValue {
-        return proxyValue(
-            this.viewService.register(id, (params: { [key: string]: string }) =>
-                wrapRemoteObservable(providerFunction(params))
-            )
-        )
+        return proxyValue(this.viewService.register(id, params => wrapRemoteObservable(providerFunction(params))))
     }
 }

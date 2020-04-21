@@ -12,6 +12,7 @@ import { CaseSensitivityProps, PatternTypeProps } from '../../search'
 import { SettingsCascadeProps } from '../../../../shared/src/settings/settings'
 import { ContributableViewContainer } from '../../../../shared/src/api/protocol'
 import { LoadingSpinner } from '@sourcegraph/react-loading-spinner'
+import { hasProperty } from '../../../../shared/src/util/types'
 
 interface Props
     extends ExtensionsControllerProps<'services'>,
@@ -39,7 +40,7 @@ export const ViewPage: React.FunctionComponent<Props> = ({
     _useView = useView,
     ...props
 }) => {
-    const queryParams = useMemo<{ [key: string]: string }>(
+    const queryParams = useMemo<Record<string, string>>(
         () => ({ ...Object.fromEntries(new URLSearchParams(location.search).entries()), extraPath }),
         [extraPath, location.search]
     )
@@ -67,9 +68,9 @@ export const ViewPage: React.FunctionComponent<Props> = ({
 
     return (
         <div>
-            <PageTitle title={view?.title || 'View'} />
-            {view?.title && <h1>{view?.title}</h1>}
-            {view?.content.map((content, i) =>
+            <PageTitle title={view.title || 'View'} />
+            {view.title && <h1>{view.title}</h1>}
+            {view.content.map((content, i) =>
                 isMarkupContent(content) ? (
                     <section key={i} className="mt-3">
                         {content.kind === MarkupKind.Markdown || !content.kind ? (
@@ -96,5 +97,5 @@ export const ViewPage: React.FunctionComponent<Props> = ({
 }
 
 function isMarkupContent(v: unknown): v is MarkupContent {
-    return typeof v === 'object' && v !== null && 'value' in v && typeof (v as any).value === 'string'
+    return typeof v === 'object' && v !== null && hasProperty('value')(v) && typeof v.value === 'string'
 }

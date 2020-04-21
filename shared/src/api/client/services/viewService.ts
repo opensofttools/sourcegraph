@@ -12,7 +12,7 @@ export interface View extends ExtensionView {}
  */
 export interface ViewService {
     /**
-     * Register a view provider.
+     * Register a view provider. Throws if the `id` is already registered.
      */
     register(id: string, provider: (params: { [key: string]: string }) => Observable<View>): Unsubscribable
 
